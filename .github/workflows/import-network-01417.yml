@@ -1,0 +1,47 @@
+name: Import verified AY Network 0.14.17
+on:
+  push:
+    paths: ['.github/workflows/import-network-01417.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download and verify tested artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --max-time 240 'https://aysoft.org/downloads/ay-network/0.14.17/AY-Network-0.14.17-Cleanup.apk' -o AY-Network-0.14.17-Cleanup.apk
+          curl --fail --location --retry 3 --max-time 240 'https://aysoft.org/downloads/ay-network/0.14.17/AY-Network-Setup-0.14.17-Windows-x64.exe' -o AY-Network-Setup-0.14.17-Windows-x64.exe
+          cat > SHA256SUMS.txt <<'SUMS'
+          94c0c04836a2819304294dddece18a1ddda8cc7c3258b50d32a0629b1c394c9a  AY-Network-0.14.17-Cleanup.apk
+          7408e2041ae05d1def817345ac0acdf3c0b68ed2b8e7c079661502e790e7d8dd  AY-Network-Setup-0.14.17-Windows-x64.exe
+          SUMS
+          sha256sum --check SHA256SUMS.txt
+      - name: Publish test prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: hamoudaabdeen/ay-network-downloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > notes.md <<'NOTES'
+          AY Network 0.14.17 (Android versionCode 45).
+
+          Show known type/model tables by default and preserve expansion choices. Search names, hostnames and advertised models consistently. Keep per-device continuous Ping in table views; Windows uses independent CMD. Move Knowledge beside Assistant and Network setup/advanced discovery under Tools while retaining five primary sections and every existing page.
+
+          Preserve independent protocol claims; expose contradictory models. Discard old identity/services when a different MAC occupies an IP; Android also checks advertised UUID continuity. Canonicalize optional urn: prefixes and UUID case in both platforms.
+
+          Validation: 172 JavaScript tests, 78 Android unit tests, Android build/lint (0 errors), Windows build, source and packaged Electron runtime, 12 responsive Arabic/English views, and an actual connected Windows LAN scan. Same Android package and signer; previous releases retained.
+
+          Test prerelease. Physical Android installation/upgrade and Android16 LAN acceptance remain unverified. Windows installer is unsigned; packaged runtime was tested. Direct personal ChatGPT plan integration remains gated pending official client approval. The field guide remains an initial edition.
+          نسخة اختبار: تنظيم الجداول والبحث وPing وإصلاح دمج أدلة هوية الأجهزة، مع الحفاظ على البيانات.
+          NOTES
+          if ! gh release view v0.14.17 >/dev/null 2>&1; then
+            gh release create v0.14.17 --draft --prerelease --latest=false --title 'AY Network 0.14.17 - inventory and identity cleanup' --notes-file notes.md
+          fi
+          gh release upload v0.14.17 AY-Network-0.14.17-Cleanup.apk AY-Network-Setup-0.14.17-Windows-x64.exe SHA256SUMS.txt
+          gh release edit v0.14.17 --draft=false --prerelease --latest=false
